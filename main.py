@@ -2,10 +2,10 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
 import os
-from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from database import connection_args
 from langchain_milvus import Milvus
 from langchain_core.documents import Document
+from langchain_ollama import OllamaEmbeddings
 from extract_keywords import extract_keywords
 
 # Get the Hugging Face API Key from the ".env" file in the root of the project
@@ -13,10 +13,9 @@ load_dotenv()
 hugging_face_api_key = os.getenv("HUGGING_FACE_API_KEY")
 
 # Create the embedding function with free hugging face model
-model_name = "sentence-transformers/all-MiniLM-L6-v2"
-hf_embeddings = HuggingFaceEndpointEmbeddings(
-    model=model_name, huggingfacehub_api_token=hugging_face_api_key
-)
+model_name = "nomic-embed-text"
+KEYWORD_MODEL = "phi3:3.8b"
+hf_embeddings = OllamaEmbeddings(model=model_name)
 
 # Folder containing all PDFs
 pdf_folder = "./pdfs"
@@ -61,7 +60,7 @@ i = 0
 for doc in docs:
     chunks = text_splitter.split_text(doc.page_content)
     for chunk in chunks:
-        keywords = extract_keywords(chunk, hugging_face_api_key)
+        keywords = extract_keywords(chunk, KEYWORD_MODEL)
         document = [
             Document(
                 page_content=chunk,
