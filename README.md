@@ -1,154 +1,176 @@
-# RAG‑Starter / rag
+# 📘 RAG – Local Document Question Answering with LangChain & LangGraph
 
-A starter project for building **Retrieval‑Augmented Generation (RAG)** applications using **LangChain** + **LangGraph**.
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)](https://docs.docker.com/compose/)
+[![LangChain](https://img.shields.io/badge/LangChain-Framework-green)](https://python.langchain.com/)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
----
-
-## 🚀 Overview
-
-This project is designed as a learning and scaffold tool to help you build RAG systems. It provides the building blocks for:
-
-- Document ingestion (local files, web pages, PDFs, etc.)
-- Text splitting / chunking
-- Embedding & vector store abstraction
-- Retrieval engines (vector search, hybrid)
-- LLM wrapper / generation module
-- Orchestration via LangGraph (coordinate retrieval, generation, memory)
-- Example pipelines and demos
-
-The goal is to be modular, extensible, and educational — you can adapt each component as you grow your application.
+> A local Retrieval-Augmented Generation (RAG) application built with **LangChain** and **LangGraph**, allowing you to upload PDFs, process them, and query their content using natural language.
 
 ---
 
-## 📦 Structure
+## 🧭 Table of Contents
 
-A sample (planned) structure:
-
-```
-.
-├── README.md
-├── pyproject.toml / setup.py
-├── src/
-│   ├── rag/
-│   │   ├── __init__.py
-│   │   ├── loader.py
-│   │   ├── retriever.py
-│   │   ├── embedder.py
-│   │   ├── model.py
-│   │   ├── orchestrator.py
-│   │   └── memory.py
-├── examples/
-│   └── demo_notebook.ipynb
-├── tests/
-│   ├── test_loader.py
-│   ├── test_retriever.py
-│   └── ...
-└── docs/
-    └── (documentation site / tutorials)
-```
+- [📘 RAG – Local Document Question Answering with LangChain \& LangGraph](#-rag--local-document-question-answering-with-langchain--langgraph)
+  - [🧭 Table of Contents](#-table-of-contents)
+  - [📖 About the Project](#-about-the-project)
+  - [🌿 Branch Information](#-branch-information)
+  - [✨ Features](#-features)
+  - [🧰 Prerequisites](#-prerequisites)
+  - [⚙️ Installation](#️-installation)
+  - [🚀 Running the Project](#-running-the-project)
+  - [🗂 Project Structure](#-project-structure)
+  - [🧭 Usage Guide](#-usage-guide)
+  - [🧩 Troubleshooting](#-troubleshooting)
+  - [🛠 Roadmap](#-roadmap)
+  - [🤝 Contributing](#-contributing)
+  - [📄 License](#-license)
 
 ---
 
-## 📖 Quick Start
+## 📖 About the Project
 
-1. **Install dependencies:**
+This project demonstrates how to build a **Retrieval-Augmented Generation (RAG)** pipeline using:
+- **LangChain** for document processing and conversational retrieval
+- **LangGraph** for workflow orchestration
+- **Docker Compose** for managing local services (e.g., vector databases)
 
+It enables users to:
+- Upload PDFs to a local folder
+- Automatically index and embed the content
+- Ask natural-language questions about the documents
+
+---
+
+## 🌿 Branch Information
+
+- **Main Branch** → Local version (uses APIs and Dockerized services)
+- **Without-API Branch** → Minimal version that does not depend on external APIs or online endpoints
+
+> 💡 To switch to the no-API version, use:
+> ```bash
+> git checkout without-api
+> ```
+
+---
+
+## ✨ Features
+
+✅ Local document ingestion (PDFs)  
+✅ RAG pipeline using LangChain + LangGraph  
+✅ Dockerized environment for easy setup  
+✅ Vector store integration  
+✅ Command-line or programmatic interaction  
+
+---
+
+## 🧰 Prerequisites
+
+Before starting, ensure you have installed:
+
+- [Docker](https://www.docker.com/)
+- [Docker Compose](https://docs.docker.com/compose/)
+- [Python 3.9+](https://www.python.org/downloads/)
+
+---
+
+## ⚙️ Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/alibalouchi95/rag.git
+   cd rag
+   ```
+
+2. **Add your PDF files:**
+   Place all your documents in the `pdfs/` folder.
+
+3. **Start the Docker environment:**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Install Python dependencies (if needed locally):**
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Ingest your documents:**
+---
 
-   ```python
-   from rag.loader import DocumentLoader
-   docs = DocumentLoader.from_directory("data/")
+## 🚀 Running the Project
+
+1. Make sure Docker services are running (`docker-compose up -d`).
+2. Verify that your PDFs are placed under the `/pdfs` folder.
+3. Run the main script (depending on your implementation):
+   ```bash
+   python main.py
    ```
+4. The system will:
+   - Read PDFs from `pdfs/`
+   - Split and embed content
+   - Store embeddings in a vector database
+   - Start a retrieval-based QA system (Not Implemented yet)
 
-3. **Build embeddings & index:**
+---
 
-   ```python
-   from rag.embedder import EmbeddingModel
-   from rag.retriever import VectorRetriever
+## 🗂 Project Structure
 
-   embed = EmbeddingModel(model="openai-text-embedding")
-   retriever = VectorRetriever(embedding_model=embed)
-   retriever.add_documents(docs)
+```
+rag/
+├── pdfs/                # Place your PDF files here
+├── docker-compose.yml   # Defines services and dependencies
+├── main.py              # Entry point for running the app
+├── requirements.txt     # Python dependencies
+├── README.md            # Project documentation
+└── ...
+```
+
+---
+
+## 🧭 Usage Guide
+
+1. Place all PDF documents you wish to query inside the `pdfs/` directory.  
+2. Start the containers using:
+   ```bash
+   docker-compose up -d
    ```
-
-4. **Run a query:**
-
-   ```python
-   from rag.orchestrator import RAGOrchestrator
-
-   orchestrator = RAGOrchestrator(retriever=retriever, llm_model="gpt‑3.5‑turbo")
-   answer = orchestrator.run("What is the meaning of life?")
-   print(answer)
-   ```
-
-5. **(Optional) Use in conversational / memory mode:**
-
-   ```python
-   from rag.orchestrator import StatefulRAGOrchestrator
-   conv = StatefulRAGOrchestrator(...)
-   conv.add_user_input("Tell me about RAG.")
-   conv.add_user_input("And how LangGraph helps?")
-   ```
+3. Run the main script or notebook to process and query the files.  
+4. Ask questions in natural language and get AI-generated answers from your own documents. (Not Implemented yet)
 
 ---
 
-## 🛠️ Features & Roadmap
+## 🧩 Troubleshooting
 
-- ✅ Document loading (local / web)
-- ✅ Text splitting / chunking
-- ✅ Embedding interface (OpenAI and local)
-- ✅ Vector retrieval abstraction
-- ✅ LangGraph orchestration pipeline
-- 🔄 Memory / stateful RAG (planned)
-- 🔄 Support for multiple vector stores (Chroma, FAISS, Pinecone)
-- 🔄 Tool integration / fallback logic
-- 🔄 Graph-based retrieval & advanced RAG strategies (PathRAG, LeanRAG, adaptive routing)
+| Issue | Possible Solution |
+|-------|-------------------|
+| `Database 'rag_db' does not exist.` | Ensure Docker containers are running and services initialized. |
+| No data indexed | Check that PDFs are actually in `/pdfs` before running the ingestion process. |
+| API key errors | Verify environment variables in `.env` file or configuration settings. |
 
 ---
 
-## 📂 Examples & Demos
+## 🛠 Roadmap
 
-Check out the `examples/` folder for Jupyter notebooks showing example usage:
-
-- Q&A over local documents
-- Conversational RAG example
-- (Future) Hybrid RAG / fallback example
-
----
-
-## 🧪 Testing & CI
-
-We include unit tests in `tests/` for each core module (loader, retriever, orchestrator, etc.).  
-CI pipelines will run linting, formatting, and tests.
+- [ ] Add support for multiple document formats (TXT, DOCX, HTML)  
+- [ ] Integrate a web UI (Streamlit or Gradio)  
+- [ ] Add chat history and streaming responses  
+- [ ] Add multi-language support  
+- [ ] Add FAISS / Qdrant vector store options  
 
 ---
 
-## 📖 Further Reading & References
+## 🤝 Contributing
 
-- [LangChain RAG Tutorial](https://python.langchain.com/docs/tutorials/rag/)
-- [Graph RAG (GraphRetriever)](https://python.langchain.com/docs/integrations/retrievers/graph_rag/)
-- [Adaptive RAG with LangGraph](https://langchain-ai.github.io/langgraph/tutorials/rag/langgraph_adaptive_rag_local/)
-- [PathRAG / LeanRAG (recent research)](https://arxiv.org/abs/2502.14902)
-
----
-
-## 🧩 Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repo  
-2. Create a feature branch  
-3. Run tests & ensure linting passes  
-4. Submit a pull request
-
-Add issues, label them, and we’ll triage and assign accordingly.
+Contributions, issues, and feature requests are welcome!  
+Feel free to fork this repo and submit a pull request.
 
 ---
 
 ## 📄 License
 
-This project is MIT licensed.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Author:** [Ali Balouchi](https://github.com/alibalouchi95)  
+**Repo:** [github.com/alibalouchi95/rag](https://github.com/alibalouchi95/rag)

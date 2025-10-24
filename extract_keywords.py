@@ -27,6 +27,7 @@ def extract_keywords(text: str, model_name: str) -> List[str]:
         "You are an expert keyword extraction tool. "
         "Your task is to analyze the provided text and extract the 5 to 10 most relevant, "
         "important keywords or key phrases. "
+        "Return ONLY the keywords as a JSON list. Do NOT include explanations, validations, or reasoning. "
         "Your output MUST strictly follow the provided JSON schema."
     )
     prompt = ChatPromptTemplate.from_messages(
@@ -41,8 +42,25 @@ def extract_keywords(text: str, model_name: str) -> List[str]:
 
     try:
         result: Keywords = chain.invoke({"text": text})
-        return result.keywords
+
+        # Ensure we got a valid Keywords object
+        if not isinstance(result, Keywords):
+            print(f"Warning: Unexpected result type: {type(result)}")
+            return ""
+
+        # Join keywords and enforce maximum length
+        keyword_string = ", ".join(result.keywords)
+
+        # CRITICAL: Enforce maximum length to prevent Milvus errors
+        MAX_KEYWORD_LENGTH = 60000  # Safety buffer below 65535
+        if len(keyword_string) > MAX_KEYWORD_LENGTH:
+            print(
+                f"Warning: Keywords truncated from {len(keyword_string)} to {MAX_KEYWORD_LENGTH} characters"
+            )
+            keyword_string = keyword_string[:MAX_KEYWORD_LENGTH]
+
+        return keyword_string
 
     except Exception as e:
         print(f"Error during Ollama keyword extraction with {model_name}: {e}")
-        return []
+        return ""  # Return empty string instead of empty list
