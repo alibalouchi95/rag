@@ -49,7 +49,7 @@ try:
         print(f"Database '{db_name}' already exists.")
         # <------This section is for test only so in the production this should be deleted------>
         # <------ START ------>
-        delete_db(db_name)
+        # delete_db(db_name)
         # <------ END ------>
     else:
         print(f"Database '{db_name}' does not exist.")
