@@ -1,77 +1,66 @@
-import json
-from huggingface_hub import InferenceClient
-from typing import List, Union
+from typing import List
+from langchain_ollama import ChatOllama
+from langchain_core.prompts import ChatPromptTemplate
+from pydantic import BaseModel, Field
 
 
-def extract_keywords(text, hf_api_key) -> List[str]:
-    client = InferenceClient(
-        provider="fireworks-ai",
-        api_key=hf_api_key,
+# 1. Define the Pydantic Schema for structured output
+class Keywords(BaseModel):
+    """A list of extracted keywords."""
+
+    keywords: List[str] = Field(
+        ...,
+        description="A list containing 5 to 10 most relevant, important keywords or key phrases.",
     )
 
-    # Cleaned-up System Prompt: Keeping the instruction for the 'keywords' key
+
+def extract_keywords(text: str, model_name: str) -> List[str]:
+
+    # Initialize the ChatOllama with the small model from main.py
+    ollama_llm = ChatOllama(model=model_name, temperature=0)
+
+    # Use LangChain to enforce JSON output using with_structured_output
+    structured_llm = ollama_llm.with_structured_output(Keywords)
+
+    # 2. Define the prompt template
     system_prompt = (
         "You are an expert keyword extraction tool. "
         "Your task is to analyze the provided text and extract the 5 to 10 most relevant, "
         "important keywords or key phrases. "
-        "Your output MUST be a valid JSON object with a single key **'keywords'** "
-        "whose value is an array of 5 to 10 strings. Do not include any text outside of the JSON."
+        "Return ONLY the keywords as a JSON list. Do NOT include explanations, validations, or reasoning. "
+        "Your output MUST strictly follow the provided JSON schema."
+    )
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            ("human", "Extract keywords from the following paragraph:\n\n{text}"),
+        ]
     )
 
-    user_prompt = f"Extract keywords from the following paragraph:\n\n{text}"
+    # 3. Create the chain and invoke the model
+    chain = prompt | structured_llm
 
-    # FIX: Remove the strict 'response_format' parameter to avoid the 400 Bad Request / Unexpected EOS error
-    completion = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        # response_format={"type": "json_object"}, # This line was removed
-    )
-
-    response_content = ""
     try:
-        response_content = completion.choices[0].message.content
-        # 3. Parse the JSON string into a Python dict/list
-        parsed_output: Union[dict, list] = json.loads(response_content)
+        result: Keywords = chain.invoke({"text": text})
 
-        final_keywords: List[str] = []
+        # Ensure we got a valid Keywords object
+        if not isinstance(result, Keywords):
+            print(f"Warning: Unexpected result type: {type(result)}")
+            return ""
 
-        # --- ROBUST FIX REMAINS ---
-        # Define the possible keys the LLM might use for the list (since it can be inconsistent)
-        POSSIBLE_KEYS = ["keywords", "content", "phrases", "data"]
+        # Join keywords and enforce maximum length
+        keyword_string = ", ".join(result.keywords)
 
-        if isinstance(parsed_output, dict):
-            # Iterate through possible keys to find the list
-            for key in POSSIBLE_KEYS:
-                if key in parsed_output and isinstance(parsed_output[key], list):
-                    final_keywords = parsed_output[key]
-                    break  # Found the list, stop searching
-        elif isinstance(parsed_output, list):
-            # If the model returns the list directly
-            final_keywords = parsed_output
-        else:
+        # CRITICAL: Enforce maximum length to prevent Milvus errors
+        MAX_KEYWORD_LENGTH = 60000  # Safety buffer below 65535
+        if len(keyword_string) > MAX_KEYWORD_LENGTH:
             print(
-                f"Warning: LLM returned unexpected JSON structure: {response_content}"
+                f"Warning: Keywords truncated from {len(keyword_string)} to {MAX_KEYWORD_LENGTH} characters"
             )
-            return []
+            keyword_string = keyword_string[:MAX_KEYWORD_LENGTH]
 
-        # Now, validate the extracted list of keywords
-        if isinstance(final_keywords, list) and all(
-            isinstance(k, str) for k in final_keywords
-        ):
-            return final_keywords
-        else:
-            print(
-                f"Warning: Extracted value is not a valid list of strings: {final_keywords}"
-            )
-            return []
-        # --- ROBUST FIX ENDS ---
+        return keyword_string
 
-    except json.JSONDecodeError as e:
-        print(f"Error decoding JSON from LLM: {e}\nRaw Response: {response_content}")
-        return []
     except Exception as e:
-        print("Error while extracting keywords:", e)
-        return []
+        print(f"Error during Ollama keyword extraction with {model_name}: {e}")
+        return ""  # Return empty string instead of empty list
