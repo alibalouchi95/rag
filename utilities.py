@@ -13,6 +13,21 @@ milvus_host = os.getenv("MILVUS_HOST")
 COLLECTION_NAME = "LangChainCollection"
 
 
+def flush_db(collection_name=COLLECTION_NAME):
+    connections.connect(
+        host=milvus_host,
+        port=milvus_port,
+        user=milvus_username,
+        password=milvus_password,
+        db_name=db_name,
+    )
+    collection = Collection(collection_name)
+    collection.flush()
+    print(
+        f"✓ The database ${db_name} collection ${COLLECTION_NAME} was flushed successfully"
+    )
+
+
 def get_collection_details(collection_name, limit=5):
     connections.connect(
         host=milvus_host,

@@ -25,6 +25,17 @@ connection_args = {
     "db_name": db_name,
 }
 
+index_params = {
+    "index_type": "HNSW",
+    "metric_type": "COSINE",
+    "params": {"M": 32, "efConstruction": 200},
+}
+
+search_params = {
+    "metric_type": "COSINE",
+    "params": {"ef": 64},  # Larger ef = higher accuracy, slower
+}
+
 
 def delete_db(name):
     existing_databases = db.list_database()
@@ -65,11 +76,8 @@ hf_embeddings = OllamaEmbeddings(model=EMBED_MODEL_NAME)
 vector_store = Milvus(
     embedding_function=hf_embeddings,
     connection_args=connection_args,
-    index_params={
-        "index_type": "IVF_FLAT",
-        "metric_type": "L2",
-        "params": {"nlist": 1024},
-    },
+    index_params=index_params,
+    search_params=search_params,
     consistency_level="Strong",
     drop_old=False,
     auto_id=True,
