@@ -11,13 +11,3 @@ print(f"Embedding length: {len(embedded_query)}")
 
 # --- Run search using LangChain wrapper ---
 print("\nRunning similarity search...")
-
-# Updated call:
-results = vector_store.similarity_search(query=query, k=1)
-
-# Print results
-print("\nSearch results:")
-for i, r in enumerate(results):
-    print(f"--- Result {i+1} ---")
-    print("Text:", r.page_content)
-    print("Metadata:", r.metadata)

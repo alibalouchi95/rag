@@ -5,8 +5,8 @@ import os
 import time
 from langchain_core.documents import Document
 
-from extract_keywords import extract_keywords
-from database import vector_store
+from app.services.extract_keywords import extract_keywords
+from app.services.database import vector_store
 
 # Keyword extraction model
 KEYWORD_MODEL_NAME = "phi3:3.8b"

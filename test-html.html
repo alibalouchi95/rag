@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple POST Request</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result-container.show {
+            display: block;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .result-content {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .error {
+            border-left-color: #e74c3c;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            margin-top: 20px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Send Message</h1>
+
+        <div class="input-group">
+            <label for="messageInput">Enter your message:</label>
+            <input type="text" id="messageInput" placeholder="Type your message here...">
+        </div>
+
+        <button id="sendBtn" onclick="sendMessage()">Send</button>
+
+        <div id="loading" class="loading" style="display: none;">Sending...</div>
+
+        <div id="resultContainer" class="result-container">
+            <div id="result-title" class="result-title">Response:</div>
+            <div id="resultContent" class="result-content"></div>
+            <div id="result-keywords"></div>
+        </div>
+    </div>
+
+    <script>
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput').value.trim();
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            const resultTitle = document.getElementById('result-title')
+            const resultKeywords = document.getElementById('result-keywords')
+            const sendBtn = document.getElementById('sendBtn');
+            const loading = document.getElementById('loading');
+
+            // Validate input
+            if (!messageInput) {
+                alert('Please enter a message');
+                return;
+            }
+
+            // Show loading state
+            sendBtn.disabled = true;
+            loading.style.display = 'block';
+            resultContainer.classList.remove('show');
+
+            try {
+                // Replace this URL with your actual API endpoint
+                const apiUrl = 'http://localhost:8000/get-answer';
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: messageInput
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const responseData = await response.json();
+
+                // Display the response - adjust this based on your API response structure
+                // If your API returns {response: "some text"}, it will show that
+                if (responseData.answer) {
+                    resultContent.textContent = responseData.answer;
+                    resultTitle.textContent = `${responseData.metadata.pdf_name}`.split(".")[0]
+                    keywords = responseData.metadata.keywords.split(", ").slice(0, 5).join(", ")
+                    resultKeywords.textContent = keywords
+                }
+
+                resultContent.classList.remove('error');
+                resultContainer.classList.add('show');
+
+            } catch (error) {
+                // Display error
+                resultContent.textContent = 'Error: ' + error.message;
+                resultContent.classList.add('error');
+                resultContainer.classList.add('show');
+            } finally {
+                // Hide loading state
+                sendBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('messageInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+
+</html>
