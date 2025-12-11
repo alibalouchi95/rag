@@ -1,84 +1,104 @@
-from pymilvus import MilvusException, connections, db, utility, Collection
+# database.py (Qdrant version)
 from dotenv import load_dotenv
 import os
-from langchain_milvus import Milvus
+from langchain_qdrant import QdrantVectorStore
 from langchain_ollama import OllamaEmbeddings
-
-EMBED_MODEL_NAME = "mxbai-embed-large"
+from qdrant_client import QdrantClient
+from qdrant_client.http import models as qdrant_models
+from qdrant_client.models import Distance
 
 load_dotenv()
-hugging_face_api_key = os.getenv("HUGGING_FACE_API_KEY")
-milvus_username = os.getenv("MILVUS_USER_NAME")
-milvus_password = os.getenv("MILVUS_PASSWORD")
-milvus_port = os.getenv("MILVUS_PORT")
-milvus_host = os.getenv("MILVUS_HOST")
 
-conn = connections.connect(host=milvus_host, port=int(milvus_port))
+# Keep your existing env var names so you don't have to change .env right away
+hugging_face_api_key = os.getenv("HUGGING_FACE_API_KEY")  # unused here but kept
+q_host = os.getenv("MILVUS_HOST", "localhost")
+q_port = int(os.getenv("MILVUS_PORT", 6333))
+q_user = os.getenv(
+    "MILVUS_USER_NAME"
+)  # if you're running a secured Qdrant; unused for default
+q_password = os.getenv("MILVUS_PASSWORD")  # ditto
 
-db_name = "rag_db"
+# Collection and DB settings
+db_name = "rag_db"  # NOTE: Qdrant doesn't use DBs the same way Milvus does; kept for compatibility
+COLLECTION_NAME = "LangChainCollection"
 
-connection_args = {
-    "host": milvus_host,
-    "port": milvus_port,
-    "user": milvus_username,
-    "password": milvus_password,
-    "db_name": db_name,
-}
-
-index_params = {
-    "index_type": "HNSW",
-    "metric_type": "COSINE",
-    "params": {"M": 32, "efConstruction": 200},
-}
-
-search_params = {
-    "metric_type": "COSINE",
-    "params": {"ef": 64},  # Larger ef = higher accuracy, slower
-}
-
-
-def delete_db(name):
-    existing_databases = db.list_database()
-    if db_name in existing_databases:
-        # Use the database context
-        db.using_database(name)
-        # Drop all collections in the database
-        collections = utility.list_collections()
-        for collection_name in collections:
-            collection = Collection(name=collection_name)
-            collection.drop()
-            print(f"Collection '{collection_name}' has been dropped.")
-
-        db.drop_database(name)
-        print(f"Database '{name}' has been deleted.")
-
-
-# Print the status of the database
-try:
-    existing_databases = db.list_database()
-    if db_name in existing_databases:
-        print(f"Database '{db_name}' already exists.")
-        # <------This section is for test only so in the production this should be deleted------>
-        # <------ START ------>
-        # delete_db(db_name)
-        # <------ END ------>
-    else:
-        print(f"Database '{db_name}' does not exist.")
-        db.create_database(db_name)
-        print(f"Database '{db_name}' has been created.")
-except MilvusException as e:
-    print(f"An error occurred: {e}")
-
-# Create the embedding function with nomic-embed-text model
+# Embedding model (keeps what you had)
+EMBED_MODEL_NAME = "mxbai-embed-large"
 hf_embeddings = OllamaEmbeddings(model=EMBED_MODEL_NAME)
 
-# Create the local vector store
-vector_store = Milvus(
-    embedding_function=hf_embeddings,
-    connection_args=connection_args,
-    index_params=index_params,
-    search_params=search_params,
-    consistency_level="Strong",
-    drop_old=False,
-    auto_id=True,
+# Create Qdrant client
+# If you use an HTTP API key or cloud, adjust QdrantClient(...) args accordingly.
+qdrant_client_raw = QdrantClient(url=f"http://{q_host}:{q_port}")
+
+
+def _ensure_collection(collection_name: str):
+    """
+    Ensure a Qdrant collection exists with the right vector size and distance metric.
+    We probe the embedding model at runtime to determine vector dimensionality.
+    """
+    # If collection already exists, do nothing
+    collections = qdrant_client_raw.get_collections().collections
+    existing_names = [c.name for c in collections]
+    if collection_name in existing_names:
+        print(f"Qdrant collection '{collection_name}' already exists.")
+        return
+
+    # Determine vector size from embeddings by probing one query
+    try:
+        probe = hf_embeddings.embed_query("probe")
+        vector_size = len(probe)
+    except Exception as e:
+        # Fallback: if embedding probe fails, raise a clear error
+        raise RuntimeError(
+            "Failed to compute embedding dimension from the embedding model. "
+            "Make sure Ollama is running and the EMBED_MODEL_NAME is correct."
+        ) from e
+
+    # Create collection with Euclidean (L2) distance to match your previous L2 metric
+    print(
+        f"Creating Qdrant collection '{collection_name}' with vector size {vector_size}."
+    )
+    qdrant_client_raw.create_collection(
+        collection_name=collection_name,
+        vectors_config=qdrant_models.VectorParams(
+            size=vector_size,
+            distance=qdrant_models.Distance.COSINE,  # Changed from EUCLID
+        ),
+    )
+    print(f"Qdrant collection '{collection_name}' created.")
+
+
+# def delete_collection(collection_name: str):
+#     """Drop the Qdrant collection (irreversible)."""
+#     existing = [c.name for c in qdrant_client_raw.get_collections().collections]
+#     if collection_name in existing:
+#         qdrant_client_raw.delete_collection(collection_name=collection_name)
+#         print(f"Collection '{collection_name}' deleted from Qdrant.")
+#     else:
+#         print(f"Collection '{collection_name}' does not exist in Qdrant.")
+
+
+def delete_collection(collection_name: str):
+    existing = [c.name for c in qdrant_client_raw.get_collections().collections]
+    if collection_name in existing:
+        qdrant_client_raw.delete_collection(collection_name=collection_name)
+        print(f"Collection '{collection_name}' deleted.")
+    else:
+        print(f"Collection '{collection_name}' does not exist.")
+
+
+# Ensure collection exists
+try:
+    _ensure_collection(COLLECTION_NAME)
+except Exception as exc:
+    print(f"Error while ensuring Qdrant collection: {exc}")
+    raise
+
+# LangChain Qdrant vector store wrapper
+# Note: LangChain's Qdrant vectorstore accepts a Qdrant client and an embedding function.
+vector_store = QdrantVectorStore(
+    client=qdrant_client_raw,
+    collection_name=COLLECTION_NAME,
+    embedding=hf_embeddings,
+    distance=Distance.COSINE,  # Add this line
 )

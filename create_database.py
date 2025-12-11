@@ -1,24 +1,26 @@
+# create_database.py (Qdrant version)
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
+import time
 from langchain_core.documents import Document
+
 from extract_keywords import extract_keywords
 from database import vector_store
-import time
 from utilities import flush_db
 
-# keyword extraction model
+# Keyword extraction model
 KEYWORD_MODEL_NAME = "phi3:3.8b"
 
-# Folder containing all PDFs
+# PDF folder
 pdf_folder = "./pdfs"
 
-# List all PDF files in the folder
+# List PDF files
 pdf_files = [
     os.path.join(pdf_folder, f) for f in os.listdir(pdf_folder) if f.endswith(".pdf")
 ]
 
-# Create the text splitter function
+# Text splitter
 separators = ["\n\n", "\n", ".", "?", "!", ";", ""]
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=1200,
@@ -34,11 +36,14 @@ res = []
 def store_chunk(store, chunk, doc):
     MAX_RETRIES = 3
 
+    # Extract keywords
     keywords = extract_keywords(chunk, KEYWORD_MODEL_NAME)
 
+    # Qdrant payload limit safety (64k recommended)
     if len(keywords) > 60000:
         keywords = keywords[:60000]
 
+    # Prepare LangChain document object
     document = [
         Document(
             page_content=chunk,
@@ -51,13 +56,14 @@ def store_chunk(store, chunk, doc):
         )
     ]
 
+    # Retry loop
     for attempt in range(MAX_RETRIES):
         try:
-            store.add_documents(document)
+            store.add_documents(document)  # Works for Qdrant LangChain wrapper
             print(f"Stored chunk {len(res)}")
             res.append(document)
-            print(document)
             break
+
         except Exception as e:
             if attempt < MAX_RETRIES - 1:
                 print(f"Attempt {attempt + 1} failed: {e}. Retrying in 2 seconds...")
@@ -73,12 +79,13 @@ def store_document(store, doc):
         store_chunk(store, chunk, doc)
 
 
-# Store the embeded splited texts in the vector store
+# --- Run ingestion ---
 for file_path in pdf_files:
     loader = PyPDFLoader(file_path)
-    print(file_path)
+    print(f"Processing: {file_path}")
     docs = loader.load()
     for doc in docs:
         store_document(vector_store, doc)
 
+# Qdrant doesn't flush — this just verifies collection exists
 flush_db()
