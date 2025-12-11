@@ -11,12 +11,12 @@ load_dotenv()
 
 # Keep your existing env var names so you don't have to change .env right away
 hugging_face_api_key = os.getenv("HUGGING_FACE_API_KEY")  # unused here but kept
-q_host = os.getenv("MILVUS_HOST", "localhost")
-q_port = int(os.getenv("MILVUS_PORT", 6333))
+q_host = os.getenv("QDRANT_HOST", "localhost")
+q_port = int(os.getenv("QDRANT_PORT", 6333))
 q_user = os.getenv(
-    "MILVUS_USER_NAME"
+    "QDRANT_USER_NAME"
 )  # if you're running a secured Qdrant; unused for default
-q_password = os.getenv("MILVUS_PASSWORD")  # ditto
+q_password = os.getenv("QDRANT_PASSWORD")  # ditto
 
 # Collection and DB settings
 db_name = "rag_db"  # NOTE: Qdrant doesn't use DBs the same way Milvus does; kept for compatibility

@@ -1,20 +1,4 @@
-# utilities.py (Qdrant version)
-from dotenv import load_dotenv
-import os
-from qdrant_client import QdrantClient
-from qdrant_client.http import models as qmodels
-
-# from database import CLIENT_NAME
 from database import COLLECTION_NAME, qdrant_client_raw
-
-load_dotenv()
-
-# These env vars are kept for compatibility
-milvus_host = os.getenv("MILVUS_HOST")
-milvus_port = os.getenv("MILVUS_PORT")
-
-# Qdrant does not use db_name, but your other code imports it
-from database import db_name
 
 
 def flush_db(collection_name=COLLECTION_NAME):

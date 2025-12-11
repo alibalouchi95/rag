@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-q_host = os.getenv("MILVUS_HOST", "localhost")
-q_port = int(os.getenv("MILVUS_PORT", 6333))
+q_host = os.getenv("QDRANT_HOST", "localhost")
+q_port = int(os.getenv("QDRANT_PORT", 6333))
 COLLECTION_NAME = "LangChainCollection"
 
 # Create client
