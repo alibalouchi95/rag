@@ -7,7 +7,6 @@ from langchain_core.documents import Document
 
 from extract_keywords import extract_keywords
 from database import vector_store
-from utilities import flush_db
 
 # Keyword extraction model
 KEYWORD_MODEL_NAME = "phi3:3.8b"
@@ -29,8 +28,6 @@ text_splitter = RecursiveCharacterTextSplitter(
     length_function=len,
     is_separator_regex=False,
 )
-
-res = []
 
 
 def store_chunk(store, chunk, doc):
@@ -60,8 +57,6 @@ def store_chunk(store, chunk, doc):
     for attempt in range(MAX_RETRIES):
         try:
             store.add_documents(document)  # Works for Qdrant LangChain wrapper
-            print(f"Stored chunk {len(res)}")
-            res.append(document)
             break
 
         except Exception as e:
@@ -86,6 +81,3 @@ for file_path in pdf_files:
     docs = loader.load()
     for doc in docs:
         store_document(vector_store, doc)
-
-# Qdrant doesn't flush — this just verifies collection exists
-flush_db()

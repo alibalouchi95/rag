@@ -1,4 +1,3 @@
-# database.py (Qdrant version)
 from dotenv import load_dotenv
 import os
 from langchain_qdrant import QdrantVectorStore
@@ -9,17 +8,12 @@ from qdrant_client.models import Distance
 
 load_dotenv()
 
-# Keep your existing env var names so you don't have to change .env right away
-hugging_face_api_key = os.getenv("HUGGING_FACE_API_KEY")  # unused here but kept
 q_host = os.getenv("QDRANT_HOST", "localhost")
 q_port = int(os.getenv("QDRANT_PORT", 6333))
-q_user = os.getenv(
-    "QDRANT_USER_NAME"
-)  # if you're running a secured Qdrant; unused for default
-q_password = os.getenv("QDRANT_PASSWORD")  # ditto
+q_user = os.getenv("QDRANT_USER_NAME")
+q_password = os.getenv("QDRANT_PASSWORD")
 
 # Collection and DB settings
-db_name = "rag_db"  # NOTE: Qdrant doesn't use DBs the same way Milvus does; kept for compatibility
 COLLECTION_NAME = "LangChainCollection"
 
 # Embedding model (keeps what you had)
@@ -68,16 +62,6 @@ def _ensure_collection(collection_name: str):
     print(f"Qdrant collection '{collection_name}' created.")
 
 
-# def delete_collection(collection_name: str):
-#     """Drop the Qdrant collection (irreversible)."""
-#     existing = [c.name for c in qdrant_client_raw.get_collections().collections]
-#     if collection_name in existing:
-#         qdrant_client_raw.delete_collection(collection_name=collection_name)
-#         print(f"Collection '{collection_name}' deleted from Qdrant.")
-#     else:
-#         print(f"Collection '{collection_name}' does not exist in Qdrant.")
-
-
 def delete_collection(collection_name: str):
     existing = [c.name for c in qdrant_client_raw.get_collections().collections]
     if collection_name in existing:
@@ -95,10 +79,9 @@ except Exception as exc:
     raise
 
 # LangChain Qdrant vector store wrapper
-# Note: LangChain's Qdrant vectorstore accepts a Qdrant client and an embedding function.
 vector_store = QdrantVectorStore(
     client=qdrant_client_raw,
     collection_name=COLLECTION_NAME,
     embedding=hf_embeddings,
-    distance=Distance.COSINE,  # Add this line
+    distance=Distance.COSINE,
 )
