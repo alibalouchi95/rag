@@ -15,6 +15,7 @@ q_password = os.getenv("QDRANT_PASSWORD")
 
 # Collection and DB settings
 COLLECTION_NAME = "LangChainCollection"
+FARSI_COLLECTION_NAME = "FarsiEmbeddedCollection"
 
 # Embedding model (keeps what you had)
 EMBED_MODEL_NAME = "mxbai-embed-large"
@@ -73,7 +74,7 @@ def delete_collection(collection_name: str):
 
 # Ensure collection exists
 try:
-    _ensure_collection(COLLECTION_NAME)
+    _ensure_collection(FARSI_COLLECTION_NAME)
 except Exception as exc:
     print(f"Error while ensuring Qdrant collection: {exc}")
     raise
@@ -81,7 +82,7 @@ except Exception as exc:
 # LangChain Qdrant vector store wrapper
 vector_store = QdrantVectorStore(
     client=qdrant_client_raw,
-    collection_name=COLLECTION_NAME,
+    collection_name=FARSI_COLLECTION_NAME,
     embedding=hf_embeddings,
     distance=Distance.COSINE,
 )

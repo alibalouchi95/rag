@@ -200,11 +200,11 @@
 
                 // Display the response - adjust this based on your API response structure
                 // If your API returns {response: "some text"}, it will show that
-                if (responseData.answer) {
-                    resultContent.textContent = responseData.answer;
-                    resultTitle.textContent = `${responseData.metadata.pdf_name}`.split(".")[0]
-                    keywords = responseData.metadata.keywords.split(", ").slice(0, 5).join(", ")
-                    resultKeywords.textContent = keywords
+                if (responseData.data) {
+                    resultContent.textContent = responseData.data;
+                    // resultTitle.textContent = `${responseData.metadata.pdf_name}`.split(".")[0]
+                    // keywords = responseData.metadata.keywords.split(", ").slice(0, 5).join(", ")
+                    // resultKeywords.textContent = keywords
                 }
 
                 resultContent.classList.remove('error');
